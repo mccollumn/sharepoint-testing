@@ -20,24 +20,23 @@
 // -- This is a dual command --
 // Cypress.Commands.add("dismiss", { prevSubject: 'optional'}, (subject, options) => { ... })
 
-
-Cypress.Commands.add('spAuth', function () {
+Cypress.Commands.add("spAuth", function () {
   const options = {
-    username: Cypress.env('username'),
-    password: Cypress.env('password'),
-    pageUrl: Cypress.env('appUrl')
+    username: Cypress.env("username"),
+    password: Cypress.env("password"),
+    pageUrl: Cypress.env("appUrl"),
   };
-  
-  cy.task('SharePointLogin', options).then(result => {
+
+  cy.task("SharePointLogin", options).then((result) => {
     cy.clearCookies();
-    
-    result.cookies.forEach(cookie => {
+
+    result.cookies.forEach((cookie) => {
       cy.setCookie(cookie.name, cookie.value, {
         domain: cookie.domain,
         expiry: cookie.expires,
         httpOnly: cookie.httpOnly,
         path: cookie.path,
-        secure: cookie.secure
+        secure: cookie.secure,
       });
       Cypress.Cookies.preserveOnce(cookie.name);
     });
@@ -47,43 +46,62 @@ Cypress.Commands.add('spAuth', function () {
 /**
  * Allows you to first grab an access token before opening the SharePoint page
  */
-Cypress.Commands.add("visitWithAdal", (pageUrl) => { 
+Cypress.Commands.add("visitWithAdal", (pageUrl) => {
   const config = {
-    username: process.env.CI ? Cypress.env('USERNAME') : Cypress.env('username'),
-    password: process.env.CI ? Cypress.env('PASSWORD') : Cypress.env('password'),
-    tenant: process.env.CI ? Cypress.env('TENANT') : Cypress.env('tenant'),
-    clientId: process.env.CI ? Cypress.env('CLIENTID') : Cypress.env('clientid'),
-    clientSecret: process.env.CI ? Cypress.env('CLIENTSECRET') : Cypress.env('clientsecret'),
-    resource: process.env.CI ? Cypress.env('RESOURCE') : Cypress.env('resource')
+    username: process.env.CI
+      ? Cypress.env("USERNAME")
+      : Cypress.env("username"),
+    password: process.env.CI
+      ? Cypress.env("PASSWORD")
+      : Cypress.env("password"),
+    tenant: process.env.CI ? Cypress.env("TENANT") : Cypress.env("tenant"),
+    clientId: process.env.CI
+      ? Cypress.env("CLIENTID")
+      : Cypress.env("clientid"),
+    clientSecret: process.env.CI
+      ? Cypress.env("CLIENTSECRET")
+      : Cypress.env("clientsecret"),
+    resource: process.env.CI
+      ? Cypress.env("RESOURCE")
+      : Cypress.env("resource"),
   };
 
   // Fetch the access token for the Microsoft Graph
   cy.request({
-    method: 'POST',
+    method: "POST",
     url: `https://login.microsoft.com/${config.tenant}/oauth2/token`,
     headers: {
-       'cache-control': 'no-cache',
-       'Content-Type': 'application/x-www-form-urlencoded'
+      "cache-control": "no-cache",
+      "Content-Type": "application/x-www-form-urlencoded",
     },
     form: true,
     body: {
-      grant_type: 'password',
+      grant_type: "password",
       client_id: config.clientId,
       client_secret: config.clientSecret,
       resource: config.resource,
       password: config.password,
-      username: config.username
-    }
-  }).then(response => {
+      username: config.username,
+    },
+  }).then((response) => {
     if (response && response.status === 200 && response.body) {
       const accessToken = response.body["access_token"];
       const expires = response.body["expires_on"];
       // Store the retrieved access token in the session storage
       cy.window().then((crntWindow) => {
-        crntWindow.sessionStorage.setItem(`adal.token.keys`, `${config.resource}|`);
-        crntWindow.sessionStorage.setItem(`adal.expiration.key${config.resource}`, expires);
-        crntWindow.sessionStorage.setItem(`adal.access.token.key${config.resource}`, accessToken);
-        
+        crntWindow.sessionStorage.setItem(
+          `adal.token.keys`,
+          `${config.resource}|`
+        );
+        crntWindow.sessionStorage.setItem(
+          `adal.expiration.key${config.resource}`,
+          expires
+        );
+        crntWindow.sessionStorage.setItem(
+          `adal.access.token.key${config.resource}`,
+          accessToken
+        );
+
         cy.visitSP(pageUrl);
       });
     }
@@ -95,12 +113,16 @@ Cypress.Commands.add("visitWithAdal", (pageUrl) => {
  */
 Cypress.Commands.add("visitSP", (pageUrl) => {
   const config = {
-    username: process.env.CI ? Cypress.env('USERNAME') : Cypress.env('username'),
-    password: process.env.CI ? Cypress.env('PASSWORD') : Cypress.env('password'),
-    pageUrl
+    username: process.env.CI
+      ? Cypress.env("USERNAME")
+      : Cypress.env("username"),
+    password: process.env.CI
+      ? Cypress.env("PASSWORD")
+      : Cypress.env("password"),
+    pageUrl,
   };
 
-  cy.task('NodeAuth', config).then((data) => {
+  cy.task("NodeAuth", config).then((data) => {
     cy.visit(config.pageUrl, {
       headers: data.headers,
       onBeforeLoad: (win) => {
@@ -108,7 +130,7 @@ Cypress.Commands.add("visitSP", (pageUrl) => {
         // onBeforeLoad not working in override: https://github.com/cypress-io/cypress/issues/5633
         // Let the child think it runs in the parent
         win["parent"] = win;
-      }
+      },
     });
   });
 });
@@ -116,7 +138,7 @@ Cypress.Commands.add("visitSP", (pageUrl) => {
 /**
  * Overwriting the original visit Cypress function to add authentication
  */
-// Cypress.Commands.overwrite("visit", (originalFn, pageUrl, options) => { 
+// Cypress.Commands.overwrite("visit", (originalFn, pageUrl, options) => {
 //   const config = {
 //     username: process.env.CI ? Cypress.env('USERNAME') : Cypress.env('username'),
 //     password: process.env.CI ? Cypress.env('PASSWORD') : Cypress.env('password'),
